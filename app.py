@@ -6,62 +6,58 @@ from dotenv import find_dotenv, load_dotenv
 from langchain.schema import SystemMessage, HumanMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-# Load environment variables from .env file (optional, for other setups)
+# Load .env if present
 load_dotenv(find_dotenv(), override=True)
 
-# Streamlit app title
+# App Title
 st.title("👨‍🍳 I'm Senior Chef - Upload Food Image to Get Recipe")
 
-# Set the default API key directly (not user-editable)
-default_api_key = "AIzaSyD7YOrZrkH4SBkphu50VMJIU2780C7eUQA"
-os.environ["GOOGLE_API_KEY"] = default_api_key
-genai.configure(api_key=default_api_key)
+# Set your API Key (hardcoded for security-free demos)
+GOOGLE_API_KEY = "AIzaSyD7YOrZrkH4SBkphu50VMJIU2780C7eUQA"
+os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
+genai.configure(api_key=GOOGLE_API_KEY)
 
-# Configure generation settings
-generation_config = {'temperature': 0.9}
+# Generation settings
+generation_config = {"temperature": 0.9}
 
-# File uploader for food image
-uploaded_file = st.file_uploader("📤 Upload an image of food", type=["jpg", "jpeg", "png"])
+# Upload image
+uploaded_file = st.file_uploader("📤 Upload a food image", type=["jpg", "jpeg", "png"])
 
-if uploaded_file is not None:
-    # Open and show the image
-    img = PIL.Image.open(uploaded_file)
-    st.image(img, caption="🍽️ Uploaded Food Image", use_column_width=True)
+if uploaded_file:
+    image = PIL.Image.open(uploaded_file)
+    st.image(image, caption="📸 Uploaded Image", use_column_width=True)
 
-    # Simple heuristic to ensure it's a reasonably sized image
-    if img.size[0] < 100 or img.size[1] < 100:
-        st.warning("⚠️ This image may not contain food. Please upload a clearer food image.")
+    # Basic image size check
+    if image.size[0] < 100 or image.size[1] < 100:
+        st.warning("⚠️ Image too small or unclear. Please upload a better food image.")
     else:
-        # Generate content using Gemini from image
-        with st.spinner("🧠 Analyzing the image..."):
-            model = genai.GenerativeModel('gemini-1.5-flash', generation_config=generation_config)
-            response_from_image = model.generate_content([img])
+        with st.spinner("🔎 Analyzing image using Gemini..."):
+            model = genai.GenerativeModel("gemini-1.5-flash", generation_config=generation_config)
+            response = model.generate_content([image])
 
-        if not response_from_image.text:
-            st.error("❌ Couldn't generate description from image.")
+        if not response.text:
+            st.error("❌ Couldn't describe the image.")
         else:
-            # Show raw AI description
-            st.subheader("📝 AI Description of Image")
-            st.write(response_from_image.text)
+            st.subheader("📝 AI Description")
+            st.write(response.text)
 
-            # Extract dish name and ingredients
-            prompt = f"Extract the dish name and main ingredients from this description: {response_from_image.text}"
-            with st.spinner("🔍 Extracting key details..."):
+            # Step 2: Extract dish name & ingredients
+            prompt = f"Extract the dish name and main ingredients from this description: {response.text}"
+            with st.spinner("🔍 Extracting dish info..."):
                 extraction = model.generate_content(prompt)
 
-            st.subheader("🍴 Dish Info")
+            st.subheader("🍽️ Dish Information")
             st.write(extraction.text)
 
-            # Generate recipe using LangChain interface
+            # Step 3: Use LangChain to create recipe
             llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.9)
             messages = [
-                SystemMessage(content="You are a professional chef. Given the dish name and ingredients, generate a complete detailed recipe with cooking steps and mention the country of origin."),
+                SystemMessage(content="You are a professional chef. Based on the dish and ingredients, write a complete detailed recipe. Include cooking steps and country of origin."),
                 HumanMessage(content=extraction.text)
             ]
 
-            with st.spinner("👨‍🍳 Generating full recipe..."):
+            with st.spinner("👨‍🍳 Generating recipe..."):
                 recipe = llm.invoke(messages)
 
-            # Display final recipe
-            st.subheader("📜 Detailed Recipe")
+            st.subheader("📜 Full Recipe")
             st.write(recipe.content)
