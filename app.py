@@ -1,32 +1,28 @@
 import streamlit as st
 from transformers import pipeline
 from PIL import Image
-import torch
-
-# Set the page title
-st.set_page_config(page_title="🖼️ Image Captioning with BLIP", layout="centered")
 
 # App title
-st.title("🧠 Image to Text using BLIP")
-st.markdown("Upload an image, and I'll describe it using the **BLIP** model (`Salesforce/blip-image-captioning-large`).")
+st.set_page_config(page_title="🖼️ Image Captioning")
+st.title("🧠 Image to Text with BLIP")
+st.markdown("Upload an image and I'll describe it using AI!")
 
-# Load model (only once)
+# Load the BLIP model (cached to avoid reloading)
 @st.cache_resource
 def load_model():
     return pipeline("image-to-text", model="Salesforce/blip-image-captioning-large")
 
-pipe = load_model()
+captioning_pipe = load_model()
 
 # Upload image
-uploaded_file = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg"])
+uploaded_file = st.file_uploader("Upload an image (jpg/png)", type=["jpg", "jpeg", "png"])
 
-# Display image and generate caption
 if uploaded_file:
     image = Image.open(uploaded_file).convert("RGB")
     st.image(image, caption="Uploaded Image", use_column_width=True)
 
     with st.spinner("Generating caption..."):
-        result = pipe(image)
-        caption = result[0]['generated_text']
-        st.success("Caption generated!")
-        st.markdown(f"### 📝 Caption: `{caption}`")
+        results = captioning_pipe(image)
+        caption = results[0]['generated_text']
+        st.success("Caption generated:")
+        st.markdown(f"### 📝 {caption}")
