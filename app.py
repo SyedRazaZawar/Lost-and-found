@@ -3,7 +3,7 @@ import streamlit as st
 from huggingface_hub import InferenceClient
 from PIL import Image
 
-# Hugging Face Token (keep this private in production!)
+# Hugging Face Token (note: do not expose your token in production)
 HF_TOKEN = "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"
 
 # Initialize Hugging Face Inference Client
@@ -17,7 +17,7 @@ st.set_page_config(page_title="NSFW Image Detection", page_icon="🔍")
 st.title("🔍 NSFW Image Detection")
 st.write("Upload an image to detect whether it is safe-for-work (SFW) or not (NSFW).")
 
-# Upload image
+# Image uploader
 uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
 
 if uploaded_file:
@@ -25,12 +25,12 @@ if uploaded_file:
     image = Image.open(uploaded_file)
     st.image(image, caption="Uploaded Image", use_column_width=True)
 
-    # Save to temp path
+    # Save temporarily
     temp_path = "temp_image.jpg"
     with open(temp_path, "wb") as f:
         f.write(uploaded_file.read())
 
-    # Run model
+    # Run classification
     with st.spinner("Classifying..."):
         try:
             results = client.image_classification(
@@ -39,6 +39,7 @@ if uploaded_file:
             )
 
             st.subheader("Results:")
+            # Make sure it's iterable
             if isinstance(results, list):
                 for res in results:
                     label = res.get("label", "Unknown")
@@ -50,6 +51,6 @@ if uploaded_file:
         except Exception as e:
             st.error(f"Error during classification: {e}")
 
-    # Remove temp file
+    # Remove temp image
     if os.path.exists(temp_path):
         os.remove(temp_path)
